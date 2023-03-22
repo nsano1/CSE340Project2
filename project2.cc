@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <string>
 #include <cstdlib>
+#include <fstream>
 #include "lexer.h"
 
 using namespace std;
@@ -14,16 +15,13 @@ using namespace std;
 string readString;
 string grammar;
 
-InputBuffer* inputGrammar = new InputBuffer();
-InputBuffer* inputRule = new InputBuffer();
-
 LexicalAnalyzer* lexGrammar = new LexicalAnalyzer();
 LexicalAnalyzer* lexRule = new LexicalAnalyzer();
 
 class Rule {
     public:
-        std::string leftHand;
-        std::vector<string> rightHand;
+        Token leftHand;
+        std::vector<Token> rightHand;
 };
 
 vector<Rule> ruleList;
@@ -31,175 +29,177 @@ vector<Rule> ruleList;
 vector<string> Terminals;
 vector<string> Nonterminals;
 
-
-void parseGrammar() {
-    //cuts off the HASH at the end of the grammar
-    grammar = grammar.substr(0, grammar.length() - 2);
-}
-
-Rule* parseRule(string ruleInput) {
+/*
+Rule parseRule(string ruleInput) {
     //add LHS and RHS onto respective vectors
     //read input up to ARROW and make that LHS
-    Rule* rule = new Rule();
-
-    //put this string rule into input buffer
-    inputRule->UngetString(ruleInput);
-
-    int count = 0;
+    Rule rule;
     
-    lexRule.lexme = inputRule;
+    //lexical analyzer's token string = ruleInput
+    lexRule->GetToken().lexeme = ruleInput;
+
     
 
-    /*
-    Rule structure:
-       {LEFTHAND} {ARROW} {RIGHTHAND} {ENDOFFILE}
-    */
-    
     //get {LEFTHAND}
-    
-    rule->leftHand = ruleLex->GetToken().lexeme;
-    cout << rule->leftHand << endl;
+    rule.leftHand = lexRule->GetToken();
+    std::cout << rule.leftHand.lexeme << endl;
     //add to nonterminal directly, anything in lefthand will be nonterminal
-    Nonterminals.push_back(rule->leftHand);
+    Nonterminals.push_back(rule.leftHand.lexeme);
     
     //get {ARROW}
     //inputRule->GetToken();
 
     //get {RIGHTHAND}
-    while (!inputRule->EndOfInput()){
-        rule->rightHand.push_back(inputRule->GetToken().lexme);
+    while (lexRule->peek(1).token_type != END_OF_FILE){
+        if(lexRule->peek(1).token_type != ARROW) {
+            rule.rightHand.push_back(lexRule->GetToken());
+        }
+        else {
+            lexRule->GetToken();
+        }
     }
+
+    //add the final token into RHS because the while loop will stop before reading the last token
+    rule.rightHand.push_back(lexRule->GetToken());
     
     //now return rule
     return rule;
-}
-
-void parseRuleList(){
-    std::string tempGrammar = grammar;
-    char star = '*';
-    string ruleString = "";
-    Rule* thisRule;
-    
-    for (int i = 0; i < tempGrammer.length(); i++){
-        if (tempGrammar[i] == star){
-
-            //use parseRule to return one individual rule using ruleString
-            thisRule = parseRule(ruleString);
-
-            //add to rule list
-            ruleList.push_back(thisRule);
-
-            //reset
-            ruleString = "";
-        }
-        else{
-            //get the one rule as a string (delimiter is star)
-            ruleString += tempGrammar[i];
-        }
-    }
-}
+}*/
 
 // read grammar
 void ReadGrammar()
 {
-    //read string into grammar string variable
-    cout << "0\n";
-    cin >> readString;
+    std::cout << "0\n";
+    Rule* thisRule = new Rule();
 
-    //get the grammar and store in grammar string variable
-    parseGrammar();
-    //put grammar string into input buffer to read through token by token
-    inputGrammar->UngetString(grammar);
+    int i = 1;
+    cout << "peek: " << lexGrammar->peek(i).lexeme << endl;
+    while (lexGrammar->peek(i).lexeme != "HASH"){
+
+        //get left hand side (first one)
+        thisRule->leftHand = lexGrammar->peek(i);
+        cout << "leftHand: " << thisRule->leftHand.lexeme << endl;
+        //arrow isnt taken 
+
+        //get right hand side 
+        int j = 0;
+        while (lexGrammar->peek(i).lexeme != "STAR"){
+            thisRule->rightHand.push_back(lexGrammar->peek(i));
+            cout << "rightHand: " << thisRule->rightHand[j].lexeme;
+            i++;
+            j++;
+        }
+        i++;
+    }
+
     
-    //get list of rules and store in ruleList variable (a vector of rules)
-    parseRuleList(); //will have to get each string and store in a rule (obejct) then put into class
+    /*
+    while (inputString != "#"){
+        char star = '*';
+        string ruleString = "";
+        Rule thisRule;
+        
+        //gor through string till star
+        for (int i = 0; i < inputString.length(); i++){
+            //if star make rule
+            if (inputString[i] == star){
+                
+                //use parseRule to return one individual rule using ruleString
+                thisRule = parseRule(ruleString);
+
+                //add to rule list
+                ruleList.push_back(thisRule);
+
+                //reset
+                ruleString = "";
+
+            }
+            else{
+                //get the one rule as a string (delimiter is star)
+                ruleString += inputString[i];
+            }
+        }
+        
+        //get input - this input is one individual rule
+        std::getline(std::cin, inputString); 
+    }*/
 }
 
+//tells if it is an element in given list
+bool isElement(string target) {
+    for(int i = 0; i < Nonterminals.size(); i++) {
+        if(Nonterminals[i] == target) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool isElement(string target, vector<string> list) {
+    for(int i = 0; i < list.size(); i++) {
+        if(target == list[i]) {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool isTerminal(string target) {
+    for(int i = 0; i < Terminals.size(); i++) {
+        if(Terminals[i] == target) {
+            return true;
+        }
+    }
+    return false;
+}
 
 // Task 1
 void printTerminalsAndNoneTerminals()
 {
-    cout << "1\n";
+    std::cout << "1\n";
 
-    /*
-        string nonTerminalList = "";
-        string terminalList = "";
-
-        int count = 1;
-        
-        //get first nonterminal because
-        nonTerminalList += lex->GetToken().lexeme;
-        nonTerminalList += " ";
-
-        //gets the nonterminals into a list
-        while(lex->peek(count + 1).token_type != END_OF_FILE) {
-            //find the first star in the grammar
-            if(lex->peek(count).token_type == STAR) {
-                //add the terminal after STAR to the nonTerminalList because that will be the nonTerminal of the next rule
-                nonTerminalList += lex->peek(count++).lexeme;
-                nonTerminalList += " ";
+    //iterate through full ruleList
+    for(int i = 0; i < ruleList.size(); i++) {
+        //iterate through RHS of each rule
+        for(int j = 0; j < ruleList[i].rightHand.size(); j++) {
+            if(!isElement(ruleList[i].rightHand[j].lexeme)) {
+                Terminals.push_back(ruleList[i].rightHand[j].lexeme);
             }
-            //move through the input token by token
-            count++;
         }
+    }
 
-        //while loop to add the terminals to terminal list
-        count = 0;
+    //sort the terminal and nonTerminal list to be in order as they appear in the grammar
+    //create sorted lists
+    vector<string> sortedTerminals;
+    vector<string> sortedNonterminals;
 
-        cout << terminalList << endl;
-        cout << nonTerminalList << endl;
-
-        //read through the input to find the terminals
-        while(lex->peek(count + 1).token_type != END_OF_FILE) {
-            //if the token peeked is not STAR and it is not ARROW and it is not in the nonTerminalList, it is a terminal
-            if(lex->peek(count).token_type != STAR && lex->peek(count).token_type != ARROW &&
-                !isElement(nonTerminalList, lex->peek(count).lexeme)) {
-                    terminalList += lex->peek(count).lexeme + " ";
+    //go each rule in the grammar
+    for(int i = 0; i < ruleList.size(); i++) {
+        //go through LHS first
+        if(!isTerminal(ruleList[i].leftHand.lexeme) && !(isElement(ruleList[i].leftHand.lexeme, sortedNonterminals))) {
+            sortedNonterminals.push_back(ruleList[i].leftHand.lexeme);
+        }
+        //go through RHS second
+        for(int j = 0; j < ruleList[i].rightHand.size(); j++) {
+            if(isTerminal(ruleList[i].rightHand[j].lexeme)  && !(isElement(ruleList[i].rightHand[j].lexeme, sortedTerminals))) {
+                sortedTerminals.push_back(ruleList[i].rightHand[j].lexeme);
             }
+            else if(!(isTerminal(ruleList[i].rightHand[j].lexeme))  && !(isElement(ruleList[i].rightHand[j].lexeme, sortedNonterminals))){
+                sortedNonterminals.push_back(ruleList[i].rightHand[j].lexeme);
+            }
+        }
+    }
 
-            count++;
-    }*/
-
-
-    //print THISRULE leftHand
-        //if THISRULE rightHand is in all of leftHands,
-    
-
+    //print out the sorted lists
+    for(int i = 0; i < sortedTerminals.size(); i++) {
+        cout << sortedTerminals[i] << " ";
+    }
+    for(int i = 0; i < sortedNonterminals.size(); i++) {
+        cout << sortedNonterminals[i] << " ";
+    }
 }
 
-/*
-bool isElement(string list, string find) {
-    bool isElement = false;
 
-    char delimiter = ' ';
-
-    int count = 0;
-    string arr[100];
-    int lastIndex = 0;
-
-    //make array
-    for (int i = 0; i < list.length(); i++) {
-        if (list[i] == delimiter) {
-            string word = list.substr(lastIndex, i - lastIndex);
-            arr[count] = word;
-            count++;
-            lastIndex = i + 1;
-        }
-    }
-    //get last word
-    string word = list.substr(lastIndex, list.length() - lastIndex);
-    arr[count] = word;
-    count++;
-
-    //find
-    for(int i = 0; i < count; i++){
-        if (arr[i] == find){
-            isElement = true;
-        }
-    }
-
-    return isElement;
-} */
 
 // Task 2
 void RemoveUselessSymbols()
@@ -209,25 +209,35 @@ void RemoveUselessSymbols()
 
     //remove any unaccessible rules S->AB, C->c, A->a, B->b: remove C->c
 {
-    cout << "2\n";
+    std::cout << "2\n";
 }
 
 // Task 3
 void CalculateFirstSets()
 {
-    cout << "3\n";
+    std::cout << "3\n";
+
+    //S->ABC, FIRST(S) = FIRST(A)
+    //if FIRST(A) contains epsilon, FIRST(S) = FIRST(A) - epislon U FIRST(B)
+
+    vector<string>  firstSets;
+
+    //go throught the rule list for each nonterminal
+    for(int i = 0; i < ruleList.size(); i++) {
+        
+    }
 }
 
 // Task 4
 void CalculateFollowSets()
 {
-    cout << "4\n";
+    std::cout << "4\n";
 }
 
 // Task 5
 void CheckIfGrammarHasPredictiveParser()
 {
-    cout << "5\n";
+    std::cout << "5\n";
 }
     
 int main (int argc, char* argv[])
@@ -236,7 +246,7 @@ int main (int argc, char* argv[])
 
     if (argc < 2)
     {
-        cout << "Error: missing argument\n";
+        std::cout << "Error: missing argument\n";
         return 1;
     }
 
@@ -268,9 +278,8 @@ int main (int argc, char* argv[])
             break;
 
         default:
-            cout << "Error: unrecognized task number " << task << "\n";
+            std::cout << "Error: unrecognized task number " << task << "\n";
             break;
     }
     return 0;
 }
-
